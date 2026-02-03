@@ -9,6 +9,7 @@ Usage:
     python check_squash_availability.py --date 2026-02-03 --start-time 10:00
 """
 
+import sys
 import requests
 import argparse
 import json
@@ -479,22 +480,15 @@ class SquashAvailabilityChecker:
         
         print(f"\n{'='*60}")
 
-def main():
-    parser = argparse.ArgumentParser(description='Check Places Leisure squash court availability')
-    parser.add_argument('--date', help='Target date (YYYY-MM-DD). Defaults to today if not provided')
-    parser.add_argument('--start-time', required=True, help='Start time (HH:MM) - checks 40-minute slot and 40 minutes before')
-    
-    args = parser.parse_args()
-    
-    # Default to today's date if not provided
-    if args.date is None:
-        from datetime import datetime
-        args.date = datetime.now().strftime('%Y-%m-%d')
-    
+def check_availability_programmatic(target_date: str, start_time: str) -> Dict:
+    """
+    Programmatic interface to check squash availability.
+    Returns structured data instead of printing to stdout.
+    """
     checker = SquashAvailabilityChecker()
     
     try:
-        main_court_info, before_court_info, main_start, main_end, before_start, before_end = checker.check_squash_availability(args.date, args.start_time)
+        main_court_info, before_court_info, main_start, main_end, before_start, before_end = checker.check_squash_availability(target_date, start_time)
         
         # Count available slots for both time periods
         main_available = sum(1 for court_data in main_court_info.values() if court_data['available'])
@@ -515,7 +509,7 @@ def main():
         from datetime import datetime, timezone
         
         # Parse the before slot start time to create proper datetime
-        before_datetime = datetime.strptime(f"{args.date}T{before_start}:00", "%Y-%m-%dT%H:%M:%S")
+        before_datetime = datetime.strptime(f"{target_date}T{before_start}:00", "%Y-%m-%dT%H:%M:%S")
         before_datetime_utc = before_datetime.replace(tzinfo=timezone.utc)
         
         # Calculate previous activity date (40 minutes before)
@@ -528,24 +522,47 @@ def main():
         # Build the booking URL with parameters
         booking_url = f"https://placesleisure.gladstonego.cloud/book/calendar/041A000005?activityDate={activity_date}&previousActivityDate={previous_activity_date}"
         
-        # Output JSON result
+        # Return structured result
         result = {
             "success": success,
             "message": message,
             "main_slot_available": main_available,
             "before_slot_available": before_available,
-            "booking_url": booking_url
+            "booking_url": booking_url,
+            "main_court_info": main_court_info,
+            "before_court_info": before_court_info,
+            "time_slots": {
+                "main": {"start": main_start, "end": main_end},
+                "before": {"start": before_start, "end": before_end}
+            }
         }
         
-        print(json.dumps(result, indent=2))
+        return result
         
     except Exception as e:
         error_result = {
             "success": False,
             "message": f"Error checking availability: {str(e)}",
-            "booking_url": "https://placesleisure.gladstonego.cloud/book/calendar/041A000005"
+            "booking_url": "https://placesleisure.gladstonego.cloud/book/calendar/041A000005",
+            "error": str(e)
         }
-        print(json.dumps(error_result, indent=2))
+        return error_result
+
+def main():
+    parser = argparse.ArgumentParser(description='Check Places Leisure squash court availability')
+    parser.add_argument('--date', help='Target date (YYYY-MM-DD). Defaults to today if not provided')
+    parser.add_argument('--start-time', required=True, help='Start time (HH:MM) - checks 40-minute slot and 40 minutes before')
+    
+    args = parser.parse_args()
+    
+    # Default to today's date if not provided
+    if args.date is None:
+        from datetime import datetime
+        args.date = datetime.now().strftime('%Y-%m-%d')
+    
+    # Use the programmatic interface and print the result
+    result = check_availability_programmatic(args.date, args.start_time)
+    print(json.dumps(result, indent=2))
 
 if __name__ == "__main__":
     main()
