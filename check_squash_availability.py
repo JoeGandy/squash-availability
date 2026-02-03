@@ -497,12 +497,12 @@ def check_availability_programmatic(target_date: str, start_time: str) -> Dict:
         # Determine success and message
         if before_available > 0:
             if before_available == 1:
-                message = "There is one slot free before your booking"
+                message = "There is one court free before your booking, see link to find out which court is free"
             else:
-                message = f"There are {before_available} slots free before your booking"
+                message = f"There are {before_available} courts free before your booking"
             success = True
         else:
-            message = "There is no slots free before your booking"
+            message = "There are no courts free before your booking, no point getting there early!"
             success = False
         
         # Build booking URL with proper parameters
