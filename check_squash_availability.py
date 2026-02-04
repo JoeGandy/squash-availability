@@ -508,9 +508,10 @@ def check_availability_programmatic(target_date: str, start_time: str) -> Dict:
         # Build booking URL with proper parameters
         from datetime import datetime, timezone
         
-        # Parse the before slot start time to create proper datetime
+        # Parse the before slot start time as local time, then convert to UTC
         before_datetime = datetime.strptime(f"{target_date}T{before_start}:00", "%Y-%m-%dT%H:%M:%S")
-        before_datetime_utc = before_datetime.replace(tzinfo=timezone.utc)
+        # Convert local time to UTC properly (assuming system local timezone)
+        before_datetime_utc = before_datetime.replace(tzinfo=datetime.now().astimezone().tzinfo).astimezone(timezone.utc)
         
         # Calculate previous activity date (40 minutes before)
         previous_datetime = before_datetime_utc - timedelta(minutes=40)
